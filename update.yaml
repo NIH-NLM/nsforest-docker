@@ -1,0 +1,10 @@
+name: nsforest
+channels: 
+  - conda-forge
+dependencies: 
+  - python=3.11
+  - scanpy
+  - numpy
+  - pandas
+  - tqdm
+  - plotly

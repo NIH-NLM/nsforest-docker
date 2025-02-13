@@ -1,6 +1,6 @@
 # Pin base image
 # See: https://hub.docker.com/r/continuumio/miniconda3
-FROM continuumio/miniconda3@sha256:166ff37fba6c25fcad8516aa5481a2a8dfde11370f81b245c1e2e8002e68bcce
+FROM continuumio/miniconda3:24.11.1-0
 LABEL description="Base docker image with conda and util libraries"
 
 # Install procps (so that Nextflow can poll CPU usage)
@@ -23,7 +23,7 @@ RUN cp .bashrc .bashrc.orig && \
     sed "s/conda activate base/conda activate $ENV_NAME/" .bashrc.orig > .bashrc
 
 # Clone the repository and checkout the specified release
-ARG VERSION="v0.2.0"
+ARG VERSION="v0.4.0"
 RUN git clone https://github.com/ralatsdc/NSForest.git && \
     cd NSForest && \
     git checkout ${VERSION}

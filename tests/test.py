@@ -1,27 +1,51 @@
+from pathlib import Path
 import subprocess
 import unittest
+
+import pandas as pd
 
 
 class TestNSForestContainer(unittest.TestCase):
 
+    def read_lists_and_assert_equal(self):
+
+        # Compare actual and expected results lists
+        pd.testing.assert_frame_equal(
+            pd.read_csv(self.results_path), pd.read_csv(self.expected_results_path)
+        )
+
+        # Compare actual and expected supplementary lists
+        pd.testing.assert_frame_equal(
+            pd.read_csv(self.supplementary_path),
+            pd.read_csv(self.expected_supplementary_path),
+            check_exact=False,
+            rtol=1e-9,
+            atol=1e-3,
+        )
+
     def setUp(self):
 
-        # Assign path to data and output
+        # Assign paths to H5AD files
         self.data_path = "/root/tests/test_data"
-
         self.adata_path = f"{self.data_path}/adata_layer1.h5ad"
-
         self.pp_adata_path = f"{self.data_path}/adata_layer1_pp.h5ad"
-
         self.gd_adata_path = f"{self.data_path}/adata_layer1_gd.h5ad"
         self.gd_cm_adata_path = f"{self.data_path}/adata_layer1_gd_cm.h5ad"
         self.gd_cm_cs_adata_path = f"{self.data_path}/adata_layer1_gd_cm_cs.h5ad"
 
-        self.output_path = f"{self.data_path}/cluster_results.csv"
-        self.expected_output_path = f"{self.data_path}/expected_cluster_results.csv"
+        # Assign paths to CSV files
+        self.results_path = f"{self.data_path}/cluster_results.csv"
+        self.expected_results_path = f"{self.data_path}/expected_cluster_results.csv"
+        self.supplementary_path = f"{self.data_path}/cluster_supplementary.csv"
+        self.expected_supplementary_path = (
+            f"{self.data_path}/expected_cluster_supplementary.csv"
+        )
 
         # Assign path to executable
         self.ns_forest_path = "/root/NSForest/nsforest.py"
+
+        # Assign cluster header
+        self.cluster_header = "cluster"
 
     def test_running_nsforest(self):
 
@@ -32,17 +56,15 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--run-nsforest-with-preprocessing",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.adata_path,
                 "-d",
                 self.data_path,
             ]
         )
 
-        # Compare output with expected output
-        with open(self.output_path) as output:
-            with open(self.expected_output_path) as expected:
-                self.assertListEqual(list(output), list(expected))
+        # Compare actual and expected results and supplementary lists
+        self.read_lists_and_assert_equal()
 
     def test_running_preprocessing_and_nsforest(self):
 
@@ -53,7 +75,7 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--preprocess-adata-file",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.adata_path,
                 "-d",
                 self.data_path,
@@ -67,17 +89,15 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--run-nsforest-without-preprocessing",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.pp_adata_path,
                 "-d",
                 self.data_path,
             ]
         )
 
-        # Compare output with expected output
-        with open(self.output_path) as output:
-            with open(self.expected_output_path) as expected:
-                self.assertListEqual(list(output), list(expected))
+        # Compare actual and expected results and supplementary lists
+        self.read_lists_and_assert_equal()
 
     def test_running_preprocessing_steps_and_nsforest(self):
 
@@ -88,7 +108,7 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--generate-scanpy-dendrogram",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.adata_path,
                 "-d",
                 self.data_path,
@@ -102,7 +122,7 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--calculate-cluster-medians-per-gene",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.gd_adata_path,
             ]
         )
@@ -114,7 +134,7 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--calculate-binary-scores-per-gene-per-cluster",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.gd_cm_adata_path,
             ]
         )
@@ -126,27 +146,24 @@ class TestNSForestContainer(unittest.TestCase):
                 self.ns_forest_path,
                 "--run-nsforest-without-preprocessing",
                 "-c",
-                "cluster",
+                self.cluster_header,
                 self.gd_cm_cs_adata_path,
                 "-d",
                 self.data_path,
             ]
         )
 
-        # Compare output with expected output
-        with open(self.output_path) as output:
-            with open(self.expected_output_path) as expected:
-                self.assertListEqual(list(output), list(expected))
-
+        # Compare actual and expected results and supplementary lists
+        self.read_lists_and_assert_equal()
 
     def tearDown(self):
 
         # Clean up
-        subprocess.run(["rm", self.output_path])
-        subprocess.run(["rm", self.pp_adata_path])
-        subprocess.run(["rm", self.gd_adata_path])
-        subprocess.run(["rm", self.gd_cm_adata_path])
-        subprocess.run(["rm", self.gd_cm_cs_adata_path])
+        [file.unlink() for file in Path(self.data_path).glob("adata_layer1_*.h5ad")]
+        [
+            file.unlink()
+            for file in Path(self.data_path).glob(f"{self.cluster_header}_*.csv")
+        ]
 
 
 if __name__ == "__main__":
